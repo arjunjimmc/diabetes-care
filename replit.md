@@ -15,6 +15,10 @@ A compassionate health companion mobile application designed to help diabetic pa
 - Point recovery mechanism with "I promise" feature
 - Social sharing for achievements (WhatsApp, Facebook)
 - Branding: "Made for your good health by Digital Samvaad"
+- Custom time selection: Users can set any time (not just fixed presets) using hour/minute inputs
+- Notification settings: Multiple ringtone options (Default, Gentle Chime, Health Alert, Soft Reminder, Calm Melody)
+- Battery optimization guidance: Instructions for keeping app running in background
+- Web-compatible time picker: Custom modal for web platform since native picker doesn't work on web
 
 ## User Preferences
 

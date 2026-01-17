@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, StyleSheet, Image, Pressable, Switch, Alert, Linking } from "react-native";
+import { View, StyleSheet, Image, Pressable, Alert, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
@@ -19,6 +21,7 @@ import {
   type UserProfile,
   type StreakData,
 } from "@/lib/storage";
+import type { ProfileStackParamList } from "@/navigation/ProfileStackNavigator";
 
 const defaultAvatar = require("../../assets/images/avatar-default.png");
 
@@ -83,11 +86,19 @@ function SettingRow({
   );
 }
 
+const DIABETES_TYPE_LABELS: Record<string, string> = {
+  type1: "Type 1 Diabetes",
+  type2: "Type 2 Diabetes",
+  prediabetes: "Prediabetes",
+  gestational: "Gestational Diabetes",
+};
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme, isDark } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [streaks, setStreaks] = useState<StreakData | null>(null);
@@ -108,18 +119,11 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleToggleNotifications = async (value: boolean) => {
-    if (!profile) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const updatedProfile = { ...profile, notificationsEnabled: value };
-    setProfile(updatedProfile);
-    await setUserProfile(updatedProfile);
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleResetData = () => {
     Alert.alert(
@@ -171,9 +175,23 @@ export default function ProfileScreen() {
         <ThemedText type="h2" style={[styles.name, { color: theme.text }]}>
           {profile.name}
         </ThemedText>
-        <ThemedText type="body" style={{ color: theme.textSecondary }}>
+        {profile.diabetesType ? (
+          <ThemedText type="body" style={{ color: theme.primary, fontFamily: "Nunito_700Bold" }}>
+            {DIABETES_TYPE_LABELS[profile.diabetesType] || profile.diabetesType}
+          </ThemedText>
+        ) : null}
+        <ThemedText type="small" style={{ color: theme.textSecondary }}>
           Taking care of yourself every day
         </ThemedText>
+        <Pressable
+          style={[styles.editProfileButton, { backgroundColor: theme.primary + "15", borderColor: theme.primary }]}
+          onPress={() => navigation.navigate("EditProfile")}
+        >
+          <Feather name="edit-2" size={14} color={theme.primary} />
+          <ThemedText type="small" style={{ color: theme.primary, fontFamily: "Nunito_700Bold" }}>
+            Edit Profile
+          </ThemedText>
+        </Pressable>
       </View>
 
       {/* Stats Card */}
@@ -232,17 +250,9 @@ export default function ProfileScreen() {
         >
           <SettingRow
             icon="bell"
-            title="Notifications"
-            subtitle="Daily reminders for your habits"
-            rightElement={
-              <Switch
-                value={profile.notificationsEnabled}
-                onValueChange={handleToggleNotifications}
-                trackColor={{ false: theme.taskPending, true: theme.primary }}
-                thumbColor={theme.backgroundDefault}
-                ios_backgroundColor={theme.taskPending}
-              />
-            }
+            title="Notifications & Sounds"
+            subtitle="Reminders, ringtone, permissions"
+            onPress={() => navigation.navigate("NotificationSettings")}
           />
           <View style={[styles.divider, { backgroundColor: theme.backgroundSecondary }]} />
           <SettingRow
@@ -350,6 +360,16 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: "Nunito_700Bold",
     marginBottom: Spacing.xs,
+  },
+  editProfileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginTop: Spacing.md,
   },
   statsCard: {
     flexDirection: "row",

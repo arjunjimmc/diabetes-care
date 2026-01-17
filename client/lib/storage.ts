@@ -10,6 +10,9 @@ const KEYS = {
   REWARDS: "@diabetes_care/rewards",
   POINTS: "@diabetes_care/points",
   SNOOZED_TASKS: "@diabetes_care/snoozed_tasks",
+  ONBOARDING_COMPLETE: "@diabetes_care/onboarding_complete",
+  BLOOD_SUGAR_LOGS: "@diabetes_care/blood_sugar_logs",
+  NOTIFICATION_SETTINGS: "@diabetes_care/notification_settings",
 };
 
 // Types
@@ -18,6 +21,28 @@ export interface UserProfile {
   avatarUri?: string;
   notificationsEnabled: boolean;
   createdAt: string;
+  diabetesType?: "type1" | "type2" | "prediabetes" | "gestational";
+  diagnosisDate?: string;
+  medications?: string[];
+  emergencyContact?: string;
+  doctorName?: string;
+  targetBloodSugar?: { min: number; max: number };
+}
+
+export interface BloodSugarLog {
+  id: string;
+  value: number;
+  unit: "mg/dL" | "mmol/L";
+  mealContext: "fasting" | "before_meal" | "after_meal" | "bedtime";
+  notes?: string;
+  loggedAt: string;
+  date: string;
+}
+
+export interface NotificationSettings {
+  enabled: boolean;
+  soundName: string;
+  vibrate: boolean;
 }
 
 export interface Habit {
@@ -415,5 +440,78 @@ export async function resetAllData(): Promise<void> {
     KEYS.REWARDS,
     KEYS.POINTS,
     KEYS.SNOOZED_TASKS,
+    KEYS.ONBOARDING_COMPLETE,
+    KEYS.BLOOD_SUGAR_LOGS,
+    KEYS.NOTIFICATION_SETTINGS,
   ]);
+}
+
+// Onboarding functions
+export async function isOnboardingComplete(): Promise<boolean> {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.ONBOARDING_COMPLETE);
+    return data === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setOnboardingComplete(): Promise<void> {
+  await AsyncStorage.setItem(KEYS.ONBOARDING_COMPLETE, "true");
+}
+
+// Blood sugar logging functions
+export async function getBloodSugarLogs(): Promise<BloodSugarLog[]> {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.BLOOD_SUGAR_LOGS);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function addBloodSugarLog(log: BloodSugarLog): Promise<void> {
+  const logs = await getBloodSugarLogs();
+  logs.push(log);
+  await AsyncStorage.setItem(KEYS.BLOOD_SUGAR_LOGS, JSON.stringify(logs));
+}
+
+export async function getBloodSugarLogsForDate(date: string): Promise<BloodSugarLog[]> {
+  const logs = await getBloodSugarLogs();
+  return logs.filter((log) => log.date === date);
+}
+
+export async function getRecentBloodSugarLogs(days: number = 7): Promise<BloodSugarLog[]> {
+  const logs = await getBloodSugarLogs();
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  const cutoffStr = cutoffDate.toISOString().split("T")[0];
+  return logs.filter((log) => log.date >= cutoffStr).sort((a, b) => 
+    new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime()
+  );
+}
+
+// Notification settings functions
+const defaultNotificationSettings: NotificationSettings = {
+  enabled: true,
+  soundName: "default",
+  vibrate: true,
+};
+
+export async function getNotificationSettings(): Promise<NotificationSettings> {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.NOTIFICATION_SETTINGS);
+    return data ? JSON.parse(data) : defaultNotificationSettings;
+  } catch {
+    return defaultNotificationSettings;
+  }
+}
+
+export async function setNotificationSettings(settings: NotificationSettings): Promise<void> {
+  await AsyncStorage.setItem(KEYS.NOTIFICATION_SETTINGS, JSON.stringify(settings));
+}
+
+// Generate unique ID
+export function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }

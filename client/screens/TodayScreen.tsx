@@ -1,9 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { View, FlatList, StyleSheet, RefreshControl, ActivityIndicator } from "react-native";
+import { View, FlatList, StyleSheet, RefreshControl, ActivityIndicator, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
+import type { TodayStackParamList } from "@/navigation/TodayStackNavigator";
 
 import { ThemedText } from "@/components/ThemedText";
 import { Companion } from "@/components/Companion";
@@ -54,11 +59,31 @@ interface SelectedTask {
   isExpired: boolean;
 }
 
+const HEALTH_TIPS = [
+  "Drink at least 8 glasses of water daily to help maintain stable blood sugar levels.",
+  "Taking a 15-minute walk after meals can help reduce blood sugar spikes.",
+  "Always carry a fast-acting sugar source with you in case of low blood sugar.",
+  "Regular sleep schedules help maintain consistent blood sugar levels.",
+  "Monitor your feet daily for any cuts, blisters, or signs of infection.",
+  "Include fiber-rich foods in your meals to slow glucose absorption.",
+  "Stress can raise blood sugar levels - try deep breathing exercises.",
+  "Keep your medications in a consistent spot so you never forget them.",
+];
+
 export default function TodayScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<TodayStackParamList>>();
+
+  const getTodayTip = () => {
+    const dayOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+    return HEALTH_TIPS[dayOfYear % HEALTH_TIPS.length];
+  };
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -322,6 +347,37 @@ export default function TodayScreen() {
         />
       ) : null}
 
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <Pressable
+          style={[styles.quickActionCard, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.navigate("BloodSugar");
+          }}
+        >
+          <Feather name="activity" size={24} color="#fff" />
+          <ThemedText type="body" style={{ color: "#fff", fontFamily: "Nunito_700Bold" }}>
+            Log Blood Sugar
+          </ThemedText>
+        </Pressable>
+      </View>
+
+      {/* Daily Health Tip */}
+      <View style={[styles.tipCard, { backgroundColor: theme.accent + "15" }]}>
+        <View style={styles.tipHeader}>
+          <View style={[styles.tipIcon, { backgroundColor: theme.accent }]}>
+            <Feather name="heart" size={16} color="#fff" />
+          </View>
+          <ThemedText type="small" style={{ color: theme.accent, fontFamily: "Nunito_700Bold" }}>
+            Daily Health Tip
+          </ThemedText>
+        </View>
+        <ThemedText type="body" style={{ color: theme.text }}>
+          {getTodayTip()}
+        </ThemedText>
+      </View>
+
       {showRecoveryPrompt && points && points.pendingRecovery > 0 ? (
         <RecoveryPromptCard
           pendingPoints={points.pendingRecovery}
@@ -461,5 +517,35 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: Spacing.sm,
+  },
+  quickActions: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  quickActionCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+    borderRadius: 12,
+  },
+  tipCard: {
+    padding: Spacing.lg,
+    borderRadius: 12,
+    gap: Spacing.sm,
+  },
+  tipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  tipIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
